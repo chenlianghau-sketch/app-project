@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補習班管理系統 - 檔案中心</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="檔案中心導覽">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">檔</div>
+          <div>
+            <div class="brand-title">補習班管理</div>
+            <div class="brand-subtitle">檔案中心</div>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" type="button" data-view="inbox">收件匣</button>
+          <button class="nav-item" type="button" data-view="sent">寄件備份</button>
+          <button class="nav-item" type="button" data-view="all">全部紀錄</button>
+        </nav>
+
+        <a class="back-link" href="../初始介面/index.html">返回初始介面</a>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">File Exchange</p>
+            <h1>人物間檔案傳送</h1>
+            <p>可傳送文字訊息、文字檔與圖片檔；測試版資料保存在目前瀏覽器。</p>
+          </div>
+          <button class="primary-button" id="clearReadButton" type="button">清除已讀</button>
+        </header>
+
+        <section class="composer" aria-label="傳送檔案">
+          <div class="section-heading">
+            <h2>新增傳送</h2>
+            <p>文字/圖片檔建議控制在 1.5MB 以內，避免瀏覽器儲存空間不足。</p>
+          </div>
+
+          <form class="send-form" id="sendForm">
+            <div class="form-grid">
+              <label>
+                寄件者
+                <select id="sender"></select>
+              </label>
+              <label>
+                收件者
+                <select id="recipient"></select>
+              </label>
+            </div>
+
+            <label>
+              標題
+              <input id="title" required maxlength="60" placeholder="例：今日作業照片、班級通知" />
+            </label>
+
+            <label>
+              文字內容
+              <textarea id="message" rows="4" maxlength="1000" placeholder="可直接輸入文字，也可附加文字檔或圖片檔"></textarea>
+            </label>
+
+            <label>
+              附加檔案
+              <input id="fileInput" type="file" accept="text/*,image/*" />
+            </label>
+
+            <div class="file-preview" id="filePreview"></div>
+
+            <div class="form-actions">
+              <button class="secondary-button" type="button" id="resetForm">清空</button>
+              <button class="primary-button" type="submit">送出</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="mail-section" aria-label="檔案列表">
+          <div class="section-heading">
+            <div>
+              <h2 id="listTitle">收件匣</h2>
+              <p id="listDescription">顯示目前使用者收到的檔案與文字。</p>
+            </div>
+            <label class="viewer-select">
+              目前人物
+              <select id="viewer"></select>
+            </label>
+          </div>
+
+          <div class="mail-list" id="mailList"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

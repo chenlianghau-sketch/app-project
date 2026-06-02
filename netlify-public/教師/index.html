@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補習班管理系統 - 教師介面</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="教師功能導覽">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">師</div>
+          <div>
+            <div class="brand-title">補習班管理</div>
+            <div class="brand-subtitle">教師介面</div>
+          </div>
+        </div>
+
+        <nav class="nav-list" id="pageTabs" aria-label="教師頁面">
+          <button class="nav-item active" type="button" data-page="timeline">時間軸</button>
+          <button class="nav-item" type="button" data-page="journal">教室日誌</button>
+          <button class="nav-item" type="button" data-page="todos">待辦事項</button>
+          <button class="nav-item" type="button" data-page="attendance">出缺勤</button>
+          <button class="nav-item" type="button" data-page="clock">打卡系統</button>
+        </nav>
+
+        <div class="sidebar-links">
+          <a class="back-link" href="../檔案中心/index.html">檔案中心</a>
+          <a class="back-link" href="../初始介面/index.html">返回初始介面</a>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Teacher Workspace</p>
+            <h1 id="pageTitle">時間軸</h1>
+            <p id="pageDescription">查看本週每天的待辦事項與班務安排。</p>
+          </div>
+          <div class="today-card">
+            <span>今日</span>
+            <strong id="todayText">--</strong>
+          </div>
+        </header>
+
+        <section class="page active" id="timelinePage">
+          <div class="section-heading">
+            <h2>每週待辦時間軸</h2>
+            <button class="primary-button" type="button" id="addTimelineTask">新增事項</button>
+          </div>
+          <div class="timeline-grid" id="timelineGrid"></div>
+        </section>
+
+        <section class="page" id="journalPage">
+          <div class="section-heading">
+            <h2>教室日誌</h2>
+            <button class="primary-button" type="button" id="saveJournal">儲存日誌</button>
+          </div>
+          <form class="journal-form">
+            <label>
+              班級
+              <input id="journalClass" placeholder="例：國一數學 A 班" />
+            </label>
+            <label>
+              今日教學狀況
+              <textarea id="teachingStatus" rows="4" placeholder="記錄課程進度、學生理解狀況、需追蹤內容"></textarea>
+            </label>
+            <label>
+              學生狀況
+              <textarea id="studentStatus" rows="4" placeholder="記錄學生學習、情緒、作業或特殊狀況"></textarea>
+            </label>
+            <label>
+              突發狀況與班級概況
+              <textarea id="incidentStatus" rows="4" placeholder="記錄突發事件、設備狀況、班級秩序等"></textarea>
+            </label>
+          </form>
+          <p class="save-status" id="journalSaveStatus" aria-live="polite"></p>
+        </section>
+
+        <section class="page" id="todosPage">
+          <div class="section-heading">
+            <h2>待辦事項</h2>
+            <button class="primary-button" type="button" id="addTodo">新增待辦</button>
+          </div>
+          <div class="todo-list" id="todoList"></div>
+        </section>
+
+        <section class="page" id="attendancePage">
+          <div class="section-heading">
+            <div>
+              <h2>學生出缺勤與訂餐</h2>
+              <p>未到班學生需填寫原因；勾選訂餐會自動計入年級訂餐人數。</p>
+            </div>
+            <button class="primary-button" type="button" id="addStudent">新增學生</button>
+          </div>
+          <div class="grade-filter" id="gradeFilter" aria-label="年級篩選"></div>
+          <div class="attendance-summary" id="mealSummary"></div>
+          <div class="attendance-list" id="attendanceList"></div>
+        </section>
+
+        <section class="page" id="clockPage">
+          <div class="section-heading">
+            <h2>上下班打卡</h2>
+          </div>
+          <div class="clock-panel">
+            <div class="clock-display">
+              <span>目前時間</span>
+              <strong id="currentTime">--:--:--</strong>
+            </div>
+            <div class="clock-actions">
+              <button class="primary-button" type="button" id="clockIn">上班打卡</button>
+              <button class="secondary-button" type="button" id="clockOut">下班打卡</button>
+            </div>
+          </div>
+          <div class="clock-log" id="clockLog"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="taskDialog">
+      <form method="dialog" class="dialog-form" id="taskForm">
+        <div class="dialog-header">
+          <h2 id="taskDialogTitle">新增事項</h2>
+          <button class="icon-button" type="button" id="closeTaskDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="taskId" />
+        <input type="hidden" id="taskMode" />
+        <label>
+          事項內容
+          <input id="taskTitle" required maxlength="50" placeholder="例：批改作業、聯絡家長" />
+        </label>
+        <label id="taskDayField">
+          星期
+          <select id="taskDay">
+            <option value="一">星期一</option>
+            <option value="二">星期二</option>
+            <option value="三">星期三</option>
+            <option value="四">星期四</option>
+            <option value="五">星期五</option>
+            <option value="六">星期六</option>
+            <option value="日">星期日</option>
+          </select>
+        </label>
+        <label>
+          備註
+          <textarea id="taskNote" rows="3" maxlength="80" placeholder="可填寫班級、時間或補充說明"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelTaskDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="studentDialog">
+      <form method="dialog" class="dialog-form" id="studentForm">
+        <div class="dialog-header">
+          <h2 id="studentDialogTitle">新增學生</h2>
+          <button class="icon-button" type="button" id="closeStudentDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="studentId" />
+        <label>
+          學生姓名
+          <input id="studentName" required maxlength="30" placeholder="例：王小明" />
+        </label>
+        <label>
+          年級
+          <select id="studentGrade"></select>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelStudentDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

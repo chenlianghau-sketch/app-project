@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補習班管理系統 - 初始介面</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="auth-page">
+      <section class="login-panel" id="loginPanel" aria-labelledby="loginTitle">
+        <div class="system-badge" aria-hidden="true">補</div>
+        <p class="eyebrow">Cram School System</p>
+        <h1 id="loginTitle">補習班管理系統</h1>
+        <p class="lead">請使用測試帳號登入，系統會依身分開啟對應介面。</p>
+
+        <form class="login-form" id="loginForm">
+          <label>
+            帳號
+            <input id="username" autocomplete="username" required placeholder="mark / carey / william" />
+          </label>
+
+          <label>
+            密碼
+            <input id="password" type="password" autocomplete="current-password" required placeholder="A@12345678" />
+          </label>
+
+          <p class="error-message" id="errorMessage" role="alert"></p>
+
+          <button class="primary-button" type="submit">登入</button>
+        </form>
+
+        <div class="test-accounts" aria-label="測試帳號">
+          <h2>測試帳號</h2>
+          <button type="button" data-account="mark">mark｜主任</button>
+          <button type="button" data-account="carey">carey｜主任、財政</button>
+          <button type="button" data-account="william">william｜教師、總務</button>
+          <p>共用密碼：A@12345678</p>
+        </div>
+      </section>
+
+      <section class="role-panel hidden" id="rolePanel" aria-labelledby="roleTitle">
+        <header class="role-header">
+          <div>
+            <p class="eyebrow">Role Workspace</p>
+            <h1 id="roleTitle">選擇工作介面</h1>
+            <p id="welcomeText" class="lead"></p>
+          </div>
+          <button class="secondary-button" id="logoutButton" type="button">登出</button>
+        </header>
+
+        <div class="role-tabs" id="roleTabs" role="tablist" aria-label="身分分頁"></div>
+        <div class="role-content" id="roleContent"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

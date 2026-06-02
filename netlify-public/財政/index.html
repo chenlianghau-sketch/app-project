@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補習班管理系統 - 財政</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="系統導覽">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">補</div>
+          <div>
+            <div class="brand-title">補習班管理</div>
+            <div class="brand-subtitle">財政</div>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" type="button" data-page="payroll" aria-current="page">
+            <span aria-hidden="true">$</span>
+            薪資結算
+          </button>
+          <button class="nav-item" type="button" data-page="ledger">
+            <span aria-hidden="true">+</span>
+            收支記帳
+          </button>
+          <button class="nav-item" type="button" data-page="calculator">
+            <span aria-hidden="true">=</span>
+            小計算機
+          </button>
+        </nav>
+
+        <div class="sidebar-links">
+          <a class="back-link" href="../檔案中心/index.html">檔案中心</a>
+          <a class="back-link" href="../初始介面/index.html">返回初始介面</a>
+        </div>
+
+        <div class="sidebar-note">
+          <strong>測試身分</strong>
+          <span>carey / 財政</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Finance</p>
+            <h1 id="pageTitle">薪資結算</h1>
+            <p id="pageDescription" class="page-description">接收主任排班估算，調整勞健保、全勤與其他扣補後產出實領薪資。</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" id="refreshDirectorData" type="button" title="重新讀取主任排班" aria-label="重新讀取主任排班">↻</button>
+            <button class="primary-button" id="openLedgerDialog" type="button">
+              <span aria-hidden="true">＋</span>
+              新增收支
+            </button>
+          </div>
+        </header>
+
+        <section class="metrics" aria-label="財務摘要">
+          <div class="metric">
+            <span class="metric-label">應發薪資</span>
+            <strong id="grossPayroll">$0</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">實發薪資</span>
+            <strong id="netPayroll">$0</strong>
+          </div>
+          <div class="metric income">
+            <span class="metric-label">本月收入</span>
+            <strong id="totalIncome">$0</strong>
+          </div>
+          <div class="metric expense">
+            <span class="metric-label">本月利潤</span>
+            <strong id="profitTotal">$0</strong>
+          </div>
+        </section>
+
+        <section class="page active" id="payrollPage">
+          <div class="section-heading">
+            <div>
+              <h2>教師薪資接收</h2>
+              <p>資料來源為主任端排班薪資估算；財政可在此調整正式扣補項目。</p>
+            </div>
+            <span class="sync-pill" id="directorSyncState">尚未讀取</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>教師</th>
+                  <th>排班筆數</th>
+                  <th>應發薪資</th>
+                  <th>勞保</th>
+                  <th>健保</th>
+                  <th>全勤</th>
+                  <th>其他扣款</th>
+                  <th>實發薪資</th>
+                </tr>
+              </thead>
+              <tbody id="payrollBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="page" id="ledgerPage">
+          <div class="section-heading">
+            <div>
+              <h2>收入支出記帳</h2>
+              <p>記錄學費收入、教材支出、租金與各式雜支，自動合計利潤。</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="收支篩選">
+              <button class="segment active" type="button" data-filter="all">全部</button>
+              <button class="segment" type="button" data-filter="income">收入</button>
+              <button class="segment" type="button" data-filter="expense">支出</button>
+            </div>
+          </div>
+
+          <div class="ledger-summary" aria-label="記帳摘要">
+            <span>收入 <strong id="ledgerIncome">$0</strong></span>
+            <span>支出 <strong id="ledgerExpense">$0</strong></span>
+            <span>利潤 <strong id="ledgerProfit">$0</strong></span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>類型</th>
+                  <th>項目</th>
+                  <th>金額</th>
+                  <th>備註</th>
+                  <th class="actions-column">操作</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="page" id="calculatorPage">
+          <div class="calculator-layout">
+            <section class="calculator" aria-label="小計算機">
+              <output id="calculatorDisplay">0</output>
+              <div class="calculator-grid">
+                <button type="button" data-calc="clear">C</button>
+                <button type="button" data-calc="backspace">⌫</button>
+                <button type="button" data-calc="%">%</button>
+                <button type="button" data-calc="/" class="operator">÷</button>
+                <button type="button" data-calc="7">7</button>
+                <button type="button" data-calc="8">8</button>
+                <button type="button" data-calc="9">9</button>
+                <button type="button" data-calc="*" class="operator">×</button>
+                <button type="button" data-calc="4">4</button>
+                <button type="button" data-calc="5">5</button>
+                <button type="button" data-calc="6">6</button>
+                <button type="button" data-calc="-" class="operator">−</button>
+                <button type="button" data-calc="1">1</button>
+                <button type="button" data-calc="2">2</button>
+                <button type="button" data-calc="3">3</button>
+                <button type="button" data-calc="+" class="operator">＋</button>
+                <button type="button" data-calc="0" class="wide">0</button>
+                <button type="button" data-calc=".">.</button>
+                <button type="button" data-calc="equals" class="equals">=</button>
+              </div>
+            </section>
+
+            <section class="history-panel">
+              <div class="section-heading compact">
+                <div>
+                  <h2>計算紀錄</h2>
+                  <p>支援 + - * / %，結果會保存在本機瀏覽器。</p>
+                </div>
+                <button class="small-button" id="clearHistory" type="button">清除</button>
+              </div>
+              <div id="calculatorHistory" class="history-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="ledgerDialog">
+      <form method="dialog" class="entry-form" id="ledgerForm">
+        <div class="dialog-header">
+          <h2 id="ledgerDialogTitle">新增收支</h2>
+          <button class="icon-button" type="button" id="closeLedgerDialog" aria-label="關閉">×</button>
+        </div>
+
+        <input type="hidden" id="ledgerId" />
+
+        <div class="form-grid">
+          <label>
+            日期
+            <input id="ledgerDate" required type="date" />
+          </label>
+          <label>
+            類型
+            <select id="ledgerType" required>
+              <option value="income">收入</option>
+              <option value="expense">支出</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          項目
+          <input id="ledgerTitle" required maxlength="40" placeholder="例：六月學費" />
+        </label>
+
+        <label>
+          金額
+          <input id="ledgerAmount" required type="number" min="0" step="1" />
+        </label>
+
+        <label>
+          備註
+          <textarea id="ledgerNote" rows="3" maxlength="100" placeholder="例：國中數學班"></textarea>
+        </label>
+
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelLedgerDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

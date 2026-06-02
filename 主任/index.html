@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>補習班管理系統 - 主任介面</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主任功能導覽">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">主</div>
+          <div>
+            <div class="brand-title">補習班管理</div>
+            <div class="brand-subtitle">主任介面</div>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="主任頁面">
+          <button class="nav-item active" type="button" data-page="logs">日誌回饋</button>
+          <button class="nav-item" type="button" data-page="assignments">班務指派</button>
+          <button class="nav-item" type="button" data-page="attendance">出勤控制</button>
+          <button class="nav-item" type="button" data-page="schedule">排班薪資</button>
+          <button class="nav-item" type="button" data-page="employees">員工資料庫</button>
+          <button class="nav-item" type="button" data-page="classes">班級管理</button>
+        </nav>
+
+        <div class="sidebar-links">
+          <a class="back-link" href="../檔案中心/index.html">檔案中心</a>
+          <a class="back-link" href="../初始介面/index.html">返回初始介面</a>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Director Workspace</p>
+            <h1 id="pageTitle">日誌回饋</h1>
+            <p id="pageDescription">檢視教師回報的教室日誌，掌握班內狀況。</p>
+          </div>
+          <div class="summary-card">
+            <span>今日提醒</span>
+            <strong id="todayAlerts">0</strong>
+          </div>
+        </header>
+
+        <section class="page active" id="logsPage">
+          <div class="section-heading">
+            <h2>教室日誌回饋</h2>
+          </div>
+          <div class="log-list" id="logList"></div>
+        </section>
+
+        <section class="page" id="assignmentsPage">
+          <div class="section-heading">
+            <div>
+              <h2>指派待辦事項</h2>
+              <p>可安排課表、分配班級與班務指派，供教師端後續接收。</p>
+            </div>
+            <button class="primary-button" type="button" id="addAssignment">新增指派</button>
+          </div>
+          <div class="assignment-board" id="assignmentBoard"></div>
+        </section>
+
+        <section class="page" id="attendancePage">
+          <div class="section-heading">
+            <div>
+              <h2>學生到班出勤控制</h2>
+              <p>主任可快速查看各年級到班、未到與訂餐概況。</p>
+            </div>
+          </div>
+          <div class="grade-filter" id="gradeFilter"></div>
+          <div class="attendance-metrics" id="attendanceMetrics"></div>
+          <div class="attendance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>學生</th>
+                  <th>年級</th>
+                  <th>到班</th>
+                  <th>訂餐</th>
+                  <th>未到原因</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="page" id="schedulePage">
+          <div class="section-heading">
+            <div>
+              <h2>排班與薪資估算</h2>
+              <p>可新增教師排班，依月薪或時薪估算薪資，後續可回傳給財政。</p>
+            </div>
+            <button class="primary-button" type="button" id="addShift">新增排班</button>
+          </div>
+          <div class="salary-summary" id="salarySummary"></div>
+          <div class="shift-list" id="shiftList"></div>
+        </section>
+
+        <section class="page" id="employeesPage">
+          <div class="section-heading">
+            <div>
+              <h2>員工資料庫</h2>
+              <p>主任可新增、編輯與刪除員工資料，供班務指派與排班使用。</p>
+            </div>
+            <button class="primary-button" type="button" id="addEmployee">新增員工</button>
+          </div>
+          <div class="employee-list" id="employeeList"></div>
+        </section>
+
+        <section class="page" id="classesPage">
+          <div class="section-heading">
+            <div>
+              <h2>班級管理</h2>
+              <p>主任可新增、編輯與刪除班級，並為班級指派老師。</p>
+            </div>
+            <button class="primary-button" type="button" id="addClass">新增班級</button>
+          </div>
+          <div class="class-list" id="classList"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="assignmentDialog">
+      <form method="dialog" class="dialog-form" id="assignmentForm">
+        <div class="dialog-header">
+          <h2 id="assignmentDialogTitle">新增指派</h2>
+          <button class="icon-button" type="button" id="closeAssignmentDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="assignmentId" />
+        <label>
+          指派類型
+          <select id="assignmentType">
+            <option value="課表">課表</option>
+            <option value="分配班級">分配班級</option>
+            <option value="班務指派">班務指派</option>
+          </select>
+        </label>
+        <label>
+          指派教師
+          <select id="assignmentTeacher"></select>
+        </label>
+        <label>
+          關聯班級
+          <select id="assignmentClass"></select>
+        </label>
+        <div class="form-grid">
+          <label>
+            指派日期
+            <input id="assignmentDate" type="date" required />
+          </label>
+          <label>
+            星期
+            <input id="assignmentDay" readonly />
+          </label>
+        </div>
+        <label>
+          指派內容
+          <input id="assignmentTitle" required maxlength="60" placeholder="例：國一數學 A 班週三小考" />
+        </label>
+        <label>
+          備註
+          <textarea id="assignmentNote" rows="3" maxlength="100" placeholder="補充時間、班級或主任提醒"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelAssignmentDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="shiftDialog">
+      <form method="dialog" class="dialog-form" id="shiftForm">
+        <div class="dialog-header">
+          <h2 id="shiftDialogTitle">新增排班</h2>
+          <button class="icon-button" type="button" id="closeShiftDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="shiftId" />
+        <label>
+          教師
+          <select id="shiftTeacher"></select>
+        </label>
+        <label>
+          日期
+          <input id="shiftDate" type="date" required />
+        </label>
+        <div class="form-grid">
+          <label>
+            開始時間
+            <input id="shiftStart" type="time" required />
+          </label>
+          <label>
+            結束時間
+            <input id="shiftEnd" type="time" required />
+          </label>
+        </div>
+        <label>
+          薪資類型
+          <select id="payType">
+            <option value="hourly">時薪</option>
+            <option value="monthly">月薪</option>
+          </select>
+        </label>
+        <label>
+          薪資參數
+          <input id="payRate" type="number" min="0" step="1" required placeholder="時薪或月薪金額" />
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelShiftDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="employeeDialog">
+      <form method="dialog" class="dialog-form" id="employeeForm">
+        <div class="dialog-header">
+          <h2 id="employeeDialogTitle">新增員工</h2>
+          <button class="icon-button" type="button" id="closeEmployeeDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="employeeId" />
+        <label>
+          員工姓名
+          <input id="employeeName" required maxlength="30" placeholder="例：william" />
+        </label>
+        <label>
+          身分
+          <select id="employeeRole">
+            <option value="主任">主任</option>
+            <option value="教師">教師</option>
+            <option value="總務">總務</option>
+            <option value="財政">財政</option>
+          </select>
+        </label>
+        <div class="form-grid">
+          <label>
+            聯絡電話
+            <input id="employeePhone" maxlength="20" placeholder="例：0912-345-678" />
+          </label>
+          <label>
+            到職日期
+            <input id="employeeStartDate" type="date" />
+          </label>
+        </div>
+        <label>
+          備註
+          <textarea id="employeeNote" rows="3" maxlength="120" placeholder="例：可排週三、週五晚班"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelEmployeeDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="classDialog">
+      <form method="dialog" class="dialog-form" id="classForm">
+        <div class="dialog-header">
+          <h2 id="classDialogTitle">新增班級</h2>
+          <button class="icon-button" type="button" id="closeClassDialog" aria-label="關閉">×</button>
+        </div>
+        <input type="hidden" id="classId" />
+        <label>
+          班級名稱
+          <input id="className" required maxlength="40" placeholder="例：1年級數學 A 班" />
+        </label>
+        <div class="form-grid">
+          <label>
+            年級
+            <select id="classGrade"></select>
+          </label>
+          <label>
+            指派老師
+            <select id="classTeacher"></select>
+          </label>
+        </div>
+        <div class="form-grid">
+          <label>
+            上課日
+            <select id="classDay">
+              <option value="一">星期一</option>
+              <option value="二">星期二</option>
+              <option value="三">星期三</option>
+              <option value="四">星期四</option>
+              <option value="五">星期五</option>
+              <option value="六">星期六</option>
+              <option value="日">星期日</option>
+            </select>
+          </label>
+          <label>
+            時段
+            <input id="classTime" maxlength="30" placeholder="例：18:30-20:00" />
+          </label>
+        </div>
+        <label>
+          備註
+          <textarea id="classNote" rows="3" maxlength="120" placeholder="例：小考班、需加強分數運算"></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" type="button" id="cancelClassDialog">取消</button>
+          <button class="primary-button" type="submit">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
