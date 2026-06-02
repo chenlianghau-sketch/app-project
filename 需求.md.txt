@@ -279,4 +279,18 @@
 		(5) 比對本地模組與 netlify-public 是否同步
 		(6) 產生 cram-school-management-app.tar.gz 並存為 CircleCI artifact
 
+12. Windows APP 開發
+
+	設定檔:
+		package.json
+		desktop/main.js
+
+	已開發功能:
+		(1) 使用 Electron 建立 Windows 桌面外殼
+		(2) 桌面版會載入 netlify-public/index.html
+		(3) 已設定 npm start 可本機預覽桌面 APP
+		(4) 已設定 npm run package:win 可產生 portable 版本
+		(5) 已設定 npm run dist:win 可產生 Windows 安裝檔
+		(6) 已設定 release/ 為 Windows APP 輸出資料夾
+
 **這是初期開發階段後新增的需求與今日開發進度紀錄，後續新增功能請繼續補在此文件。**

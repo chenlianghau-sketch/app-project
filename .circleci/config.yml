@@ -12,6 +12,13 @@ jobs:
             set -euo pipefail
             find . -path "./.git" -prune -o -name "*.js" -print0 | xargs -0 -n 1 node --check
       - run:
+          name: Verify Windows desktop wrapper
+          command: |
+            set -euo pipefail
+            test -f package.json
+            test -f desktop/main.js
+            node -e "const pkg=require('./package.json'); if (!pkg.scripts['dist:win']) process.exit(1)"
+      - run:
           name: Verify deployment folder
           command: |
             set -euo pipefail

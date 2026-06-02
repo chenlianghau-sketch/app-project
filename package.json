@@ -1,0 +1,41 @@
+{
+  "name": "cram-school-management-app",
+  "version": "1.0.0",
+  "description": "補習班管理系統 Windows 桌面版",
+  "main": "desktop/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check desktop/main.js && node --check 初始介面/app.js && node --check 主任/app.js && node --check 教師/app.js && node --check 總務/app.js && node --check 財政/app.js && node --check 檔案中心/app.js",
+    "package:win": "electron-builder --win portable",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.cramschool.management",
+    "productName": "補習班管理系統",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "netlify-public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
