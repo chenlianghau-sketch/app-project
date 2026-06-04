@@ -75,6 +75,7 @@ function initialize() {
   elements.refreshDirectorData.addEventListener("click", () => {
     directorState = loadDirectorState();
     renderAll();
+    loadCloudFinanceData();
   });
 
   elements.ledgerSegments.forEach((button) => {
@@ -100,6 +101,7 @@ function initialize() {
   });
 
   renderAll();
+  loadCloudFinanceData();
 }
 
 function switchPage(page) {
@@ -141,6 +143,115 @@ function loadFinanceState() {
 
 function saveFinanceState() {
   localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(state));
+}
+
+function canUseCloudData() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function shiftFromCloud(row) {
+  return {
+    id: row.id,
+    teacher: row.teacher_name,
+    date: row.shift_date,
+    start: String(row.start_time).slice(0, 5),
+    end: String(row.end_time).slice(0, 5),
+    payType: row.pay_type,
+    payRate: Number(row.pay_rate || 0),
+  };
+}
+
+function ledgerFromCloud(row) {
+  return {
+    id: row.id,
+    date: row.entry_date,
+    type: row.type,
+    title: row.title,
+    amount: Number(row.amount || 0),
+    note: row.note || "",
+  };
+}
+
+function ledgerToCloud(entry) {
+  return {
+    id: entry.id,
+    entry_date: entry.date,
+    type: entry.type,
+    title: entry.title,
+    amount: Number(entry.amount || 0),
+    note: entry.note || "",
+  };
+}
+
+async function loadCloudFinanceData() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const [shiftRows, adjustmentRows, ledgerRows] = await Promise.all([
+      window.cloudStore.list("shifts", "select=*&order=shift_date.desc"),
+      window.cloudStore.list("payroll_adjustments", "select=*"),
+      window.cloudStore.list("ledger_entries", "select=*&order=entry_date.desc"),
+    ]);
+
+    directorState.shifts = Array.isArray(shiftRows) ? shiftRows.map(shiftFromCloud) : directorState.shifts;
+    state.adjustments = {};
+    if (Array.isArray(adjustmentRows)) {
+      adjustmentRows.forEach((row) => {
+        state.adjustments[row.teacher_name] = {
+          laborInsurance: Number(row.labor_insurance || 0),
+          healthInsurance: Number(row.health_insurance || 0),
+          attendanceBonus: Number(row.attendance_bonus || 0),
+          otherDeduction: Number(row.other_deduction || 0),
+        };
+      });
+    }
+    if (Array.isArray(ledgerRows)) state.ledger = ledgerRows.map(ledgerFromCloud);
+    saveFinanceState();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncAdjustmentToCloud(teacher) {
+  if (!canUseCloudData()) return;
+  const adjustment = getAdjustment(teacher);
+
+  try {
+    await window.cloudStore.upsert(
+      "payroll_adjustments",
+      {
+        teacher_name: teacher,
+        labor_insurance: adjustment.laborInsurance,
+        health_insurance: adjustment.healthInsurance,
+        attendance_bonus: adjustment.attendanceBonus,
+        other_deduction: adjustment.otherDeduction,
+      },
+      "teacher_name"
+    );
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncLedgerToCloud(entry) {
+  if (!canUseCloudData() || !isUuid(entry.id)) return;
+
+  try {
+    await window.cloudStore.upsert("ledger_entries", ledgerToCloud(entry));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudLedger(id) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.remove("ledger_entries", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function renderAll() {
@@ -214,6 +325,7 @@ function renderPayroll() {
       state.adjustments[teacher] = getAdjustment(teacher);
       state.adjustments[teacher][field] = Math.max(0, Number(input.value || 0));
       saveFinanceState();
+      syncAdjustmentToCloud(teacher);
       renderPayroll();
     });
   });
@@ -290,6 +402,7 @@ function saveLedgerEntry(event) {
   if (existingIndex >= 0) state.ledger[existingIndex] = entry;
   else state.ledger.unshift(entry);
   saveFinanceState();
+  syncLedgerToCloud(entry);
   elements.ledgerDialog.close();
   renderLedger();
 }
@@ -308,6 +421,7 @@ function handleLedgerAction(action, id) {
     if (!shouldDelete) return;
     state.ledger = state.ledger.filter((item) => item.id !== id);
     saveFinanceState();
+    deleteCloudLedger(id);
     renderLedger();
   }
 }
@@ -410,4 +524,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }

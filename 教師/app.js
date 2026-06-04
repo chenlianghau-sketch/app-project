@@ -130,6 +130,8 @@ function initialize() {
   tickClock();
   setInterval(tickClock, 1000);
   renderAll();
+  loadCloudStudents();
+  loadCloudAssignments();
 }
 
 function normalizeStudent(student) {
@@ -179,12 +181,75 @@ function syncStudentsToDirector() {
   const directorState = getDirectorState();
   directorState.students = state.students.map(normalizeStudent);
   localStorage.setItem(DIRECTOR_STORAGE_KEY, JSON.stringify(directorState));
+  syncStudentsToCloud();
+}
+
+function canUseCloudStudents() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function studentFromCloud(row) {
+  return normalizeStudent({
+    id: row.id,
+    name: row.name,
+    grade: row.grade,
+    present: row.present,
+    meal: row.meal,
+    absenceReason: row.absence_reason || "",
+  });
+}
+
+function studentToCloud(student) {
+  return {
+    id: student.id,
+    name: student.name,
+    grade: student.grade,
+    present: Boolean(student.present),
+    meal: Boolean(student.meal),
+    absence_reason: student.absenceReason || "",
+  };
+}
+
+async function loadCloudStudents() {
+  if (!canUseCloudStudents()) return;
+
+  try {
+    const rows = await window.cloudStore.list("students", "select=*&order=created_at.asc");
+    if (!Array.isArray(rows)) return;
+    state.students = rows.map(studentFromCloud);
+    saveState();
+    syncStudentsToDirector();
+    renderGradeFilter();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncStudentsToCloud() {
+  if (!canUseCloudStudents()) return;
+
+  try {
+    await Promise.all(state.students.map((student) => window.cloudStore.upsert("students", studentToCloud(student))));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudStudent(id) {
+  if (!canUseCloudStudents()) return;
+
+  try {
+    await window.cloudStore.remove("students", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function syncJournalToDirector() {
   const directorState = getDirectorState();
   const savedDate = state.journal.savedAt.slice(0, 10);
-  const logId = `journal-${currentTeacher}-${savedDate}`;
+  const logId = stableUuid(`journal-${currentTeacher}-${savedDate}`);
   const existingLog = directorState.logs.find((log) => log.id === logId);
   const payload = {
     id: logId,
@@ -201,13 +266,51 @@ function syncJournalToDirector() {
   else directorState.logs.unshift(payload);
 
   localStorage.setItem(DIRECTOR_STORAGE_KEY, JSON.stringify(directorState));
+  syncJournalToCloud(payload);
+}
+
+function canUseCloudJournals() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function getCloudSession() {
+  try {
+    return JSON.parse(localStorage.getItem("cram-school-supabase-session") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function journalToCloud(log) {
+  const session = getCloudSession();
+  return {
+    id: log.id,
+    teacher_id: session?.userId || null,
+    teacher_name: log.teacher,
+    class_name: log.className,
+    teaching_status: log.teachingStatus,
+    student_status: log.studentStatus,
+    incident_status: log.incidentStatus,
+    reviewed: Boolean(log.reviewed),
+    saved_at: log.savedAt,
+  };
+}
+
+async function syncJournalToCloud(log) {
+  if (!canUseCloudJournals()) return;
+
+  try {
+    await window.cloudStore.upsert("journals", journalToCloud(log));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function syncClockRecordToDirector(record) {
   if (!record.in || !record.out) return;
 
   const directorState = getDirectorState();
-  const shiftId = `clock-${currentTeacher}-${record.date}`;
+  const shiftId = stableUuid(`clock-${currentTeacher}-${record.date}`);
   const existingShift = directorState.shifts.find((shift) => shift.id === shiftId);
   const sameDayShift = directorState.shifts.find((shift) => shift.teacher === currentTeacher && shift.date === record.date);
   const payload = {
@@ -224,6 +327,75 @@ function syncClockRecordToDirector(record) {
   else directorState.shifts.unshift(payload);
 
   localStorage.setItem(DIRECTOR_STORAGE_KEY, JSON.stringify(directorState));
+  syncClockShiftToCloud(payload);
+}
+
+function canUseCloudData() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function assignmentFromCloud(row) {
+  return normalizeAssignment({
+    id: row.id,
+    type: row.type,
+    teacher: row.teacher_name,
+    classId: row.class_id || "",
+    date: row.assigned_date,
+    day: row.day,
+    title: row.title,
+    note: row.note || "",
+    completed: Boolean(row.completed),
+  });
+}
+
+async function loadCloudAssignments() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const rows = await window.cloudStore.list("assignments", `teacher_name=eq.${encodeURIComponent(currentTeacher)}&select=*&order=assigned_date.desc`);
+    if (!Array.isArray(rows)) return;
+    const directorState = getDirectorState();
+    directorState.assignments = rows.map(assignmentFromCloud);
+    localStorage.setItem(DIRECTOR_STORAGE_KEY, JSON.stringify(directorState));
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function updateCloudAssignmentCompleted(id, completed) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.update("assignments", id, {
+      completed: Boolean(completed),
+    });
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+function shiftToCloud(shift) {
+  return {
+    id: shift.id,
+    teacher_name: shift.teacher,
+    shift_date: shift.date,
+    start_time: shift.start,
+    end_time: shift.end,
+    pay_type: shift.payType,
+    pay_rate: Number(shift.payRate || 0),
+    source: "teacher-clock",
+  };
+}
+
+async function syncClockShiftToCloud(shift) {
+  if (!canUseCloudData() || !isUuid(shift.id)) return;
+
+  try {
+    await window.cloudStore.upsert("shifts", shiftToCloud(shift));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function switchPage(page) {
@@ -473,6 +645,7 @@ function updateAssignedTask(id, completed) {
   if (!assignment) return;
   assignment.completed = completed;
   localStorage.setItem(DIRECTOR_STORAGE_KEY, JSON.stringify(directorState));
+  updateCloudAssignmentCompleted(id, completed);
   renderAll();
 }
 
@@ -581,6 +754,7 @@ function updateStudent(control) {
     if (!shouldDelete) return;
     state.students = state.students.filter((entry) => entry.id !== student.id);
     saveState();
+    deleteCloudStudent(student.id);
     syncStudentsToDirector();
     renderAttendance();
     return;
@@ -726,6 +900,30 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function stableUuid(value) {
+  let hash1 = 0x811c9dc5;
+  let hash2 = 0x01000193;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    hash1 ^= code;
+    hash1 = Math.imul(hash1, 0x01000193);
+    hash2 ^= code + index;
+    hash2 = Math.imul(hash2, 0x811c9dc5);
+  }
+
+  const hex = `${toHex(hash1)}${toHex(hash2)}${toHex(hash1 ^ hash2)}${toHex(Math.imul(hash1, hash2))}`;
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function toHex(value) {
+  return (value >>> 0).toString(16).padStart(8, "0");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 function escapeHtml(value) {

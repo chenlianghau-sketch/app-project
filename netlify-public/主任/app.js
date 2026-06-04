@@ -174,6 +174,10 @@ function initialize() {
   renderGradeFilter();
   window.addEventListener("storage", handleSharedStateChange);
   renderAll();
+  loadCloudStudents();
+  loadCloudJournals();
+  loadCloudAssignments();
+  loadCloudShifts();
 }
 
 function handleSharedStateChange(event) {
@@ -223,6 +227,226 @@ function syncStudentsToTeacher() {
 
   teacherState.students = state.students;
   localStorage.setItem(TEACHER_STORAGE_KEY, JSON.stringify(teacherState));
+  syncStudentsToCloud();
+}
+
+function canUseCloudStudents() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function studentFromCloud(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    grade: row.grade,
+    present: row.present,
+    meal: row.meal,
+    absenceReason: row.absence_reason || "",
+  };
+}
+
+function studentToCloud(student) {
+  return {
+    id: student.id,
+    name: student.name,
+    grade: student.grade,
+    present: Boolean(student.present),
+    meal: Boolean(student.meal),
+    absence_reason: student.absenceReason || "",
+  };
+}
+
+async function loadCloudStudents() {
+  if (!canUseCloudStudents()) return;
+
+  try {
+    const rows = await window.cloudStore.list("students", "select=*&order=created_at.asc");
+    if (!Array.isArray(rows)) return;
+    state.students = rows.map(studentFromCloud);
+    saveState();
+    syncStudentsToTeacher();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncStudentsToCloud() {
+  if (!canUseCloudStudents()) return;
+
+  try {
+    await Promise.all(state.students.map((student) => window.cloudStore.upsert("students", studentToCloud(student))));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+function canUseCloudJournals() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function logFromCloud(row) {
+  return {
+    id: row.id,
+    teacher: row.teacher_name,
+    className: row.class_name,
+    savedAt: row.saved_at,
+    teachingStatus: row.teaching_status,
+    studentStatus: row.student_status,
+    incidentStatus: row.incident_status,
+    reviewed: Boolean(row.reviewed),
+  };
+}
+
+async function loadCloudJournals() {
+  if (!canUseCloudJournals()) return;
+
+  try {
+    const rows = await window.cloudStore.list("journals", "select=*&order=saved_at.desc");
+    if (!Array.isArray(rows)) return;
+    state.logs = rows.map(logFromCloud);
+    saveState();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function updateCloudJournalReviewed(log) {
+  if (!canUseCloudJournals()) return;
+
+  try {
+    await window.cloudStore.update("journals", log.id, {
+      reviewed: Boolean(log.reviewed),
+    });
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+function canUseCloudData() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function assignmentFromCloud(row) {
+  return normalizeAssignment({
+    id: row.id,
+    type: row.type,
+    teacher: row.teacher_name,
+    classId: row.class_id || "",
+    date: row.assigned_date,
+    day: row.day,
+    title: row.title,
+    note: row.note || "",
+    completed: Boolean(row.completed),
+  });
+}
+
+function assignmentToCloud(assignment) {
+  return {
+    id: assignment.id,
+    type: assignment.type,
+    teacher_name: assignment.teacher,
+    class_id: isUuid(assignment.classId) ? assignment.classId : null,
+    assigned_date: assignment.date,
+    day: assignment.day,
+    title: assignment.title,
+    note: assignment.note || "",
+    completed: Boolean(assignment.completed),
+  };
+}
+
+async function loadCloudAssignments() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const rows = await window.cloudStore.list("assignments", "select=*&order=assigned_date.desc");
+    if (!Array.isArray(rows)) return;
+    state.assignments = rows.map(assignmentFromCloud);
+    saveState();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncAssignmentToCloud(assignment) {
+  if (!canUseCloudData() || !isUuid(assignment.id)) return;
+
+  try {
+    await window.cloudStore.upsert("assignments", assignmentToCloud(assignment));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudAssignment(id) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.remove("assignments", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+function shiftFromCloud(row) {
+  return {
+    id: row.id,
+    teacher: row.teacher_name,
+    date: row.shift_date,
+    start: String(row.start_time).slice(0, 5),
+    end: String(row.end_time).slice(0, 5),
+    payType: row.pay_type,
+    payRate: Number(row.pay_rate || 0),
+  };
+}
+
+function shiftToCloud(shift, source = "director") {
+  return {
+    id: shift.id,
+    teacher_name: shift.teacher,
+    shift_date: shift.date,
+    start_time: shift.start,
+    end_time: shift.end,
+    pay_type: shift.payType,
+    pay_rate: Number(shift.payRate || 0),
+    source,
+  };
+}
+
+async function loadCloudShifts() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const rows = await window.cloudStore.list("shifts", "select=*&order=shift_date.desc");
+    if (!Array.isArray(rows)) return;
+    state.shifts = rows.map(shiftFromCloud);
+    saveState();
+    renderAll();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncShiftToCloud(shift, source = "director") {
+  if (!canUseCloudData() || !isUuid(shift.id)) return;
+
+  try {
+    await window.cloudStore.upsert("shifts", shiftToCloud(shift, source));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudShift(id) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.remove("shifts", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function renderAll() {
@@ -283,6 +507,7 @@ function renderLogs() {
       if (!log) return;
       log.reviewed = !log.reviewed;
       saveState();
+      updateCloudJournalReviewed(log);
       renderAll();
     });
   });
@@ -339,9 +564,14 @@ function handleAssignmentAction(control) {
     const shouldDelete = confirm(`確定刪除「${assignment.title}」嗎？`);
     if (!shouldDelete) return;
     state.assignments = state.assignments.filter((entry) => entry.id !== assignment.id);
+    deleteCloudAssignment(assignment.id);
+    saveState();
+    renderAll();
+    return;
   }
 
   saveState();
+  syncAssignmentToCloud(assignment);
   renderAll();
 }
 
@@ -380,6 +610,7 @@ function saveAssignment(event) {
   else state.assignments.unshift(payload);
 
   saveState();
+  syncAssignmentToCloud(payload);
   elements.assignmentDialog.close();
   renderAll();
 }
@@ -516,6 +747,7 @@ function handleShiftAction(button) {
     const shouldDelete = confirm(`確定刪除 ${shift.teacher} 的排班嗎？`);
     if (!shouldDelete) return;
     state.shifts = state.shifts.filter((entry) => entry.id !== shift.id);
+    deleteCloudShift(shift.id);
     saveState();
     renderAll();
   }
@@ -553,6 +785,7 @@ function saveShift(event) {
   else state.shifts.unshift(payload);
 
   saveState();
+  syncShiftToCloud(payload);
   elements.shiftDialog.close();
   renderAll();
 }
@@ -863,4 +1096,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }

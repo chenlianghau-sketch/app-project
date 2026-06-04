@@ -2,3 +2,5 @@ node_modules/
 release/
 dist/
 *.log
+shared/supabase-config.js
+netlify-public/shared/supabase-config.js

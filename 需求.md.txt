@@ -293,4 +293,27 @@
 		(5) 已設定 npm run dist:win 可產生 Windows 安裝檔
 		(6) 已設定 release/ 為 Windows APP 輸出資料夾
 
+13. 正式共用資料庫開發
+
+	資料夾:
+		database/
+		shared/
+
+	已開發功能:
+		(1) 建立 Supabase PostgreSQL schema
+		(2) 建立 profiles、students、journals、assignments、shifts、payroll_adjustments、ledger_entries、inventory_items、messages 資料表
+		(3) 建立 updated_at 自動更新 trigger
+		(4) 啟用 Row Level Security
+		(5) 建立主任、教師、總務、財政基本資料存取權限規則
+		(6) 建立 shared/cloud-store.js 作為後續前端改接 Supabase 的共用工具
+		(7) 建立 shared/supabase-config.example.js 作為 Supabase URL 與 anon key 範本
+		(8) shared 檔案已同步至 netlify-public/shared/
+		(9) 初始介面已支援 Supabase Auth 登入
+		(10) mark、carey、william 測試帳號已可登入並讀取 profiles 角色
+		(11) 教師端與主任端 students 已支援 Supabase 雲端讀寫
+		(12) students 表新增、讀取、刪除權限已完成實測
+		(13) 教師端 journals 已支援 Supabase 雲端寫入
+		(14) 主任端 journals 已支援 Supabase 雲端讀取與已讀/未讀更新
+		(15) journals 表新增、讀取、更新已讀狀態、刪除權限已完成實測
+
 **這是初期開發階段後新增的需求與今日開發進度紀錄，後續新增功能請繼續補在此文件。**

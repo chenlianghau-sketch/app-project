@@ -70,6 +70,7 @@ const elements = {
 };
 
 render();
+loadCloudItems();
 
 elements.searchInput.addEventListener("input", (event) => {
   state.search = event.target.value.trim().toLowerCase();
@@ -118,6 +119,7 @@ elements.form.addEventListener("submit", (event) => {
   }
 
   saveItems();
+  syncItemToCloud(item);
   elements.dialog.close();
   render();
 });
@@ -144,6 +146,67 @@ function cloneDemoItems() {
 
 function saveItems() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+}
+
+function canUseCloudData() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function itemFromCloud(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    location: row.location || "",
+    quantity: Number(row.quantity || 0),
+    threshold: Number(row.threshold || 0),
+    note: row.note || "",
+    updatedAt: row.updated_at || new Date().toISOString(),
+  };
+}
+
+function itemToCloud(item) {
+  return {
+    id: item.id,
+    name: item.name,
+    location: item.location || "",
+    quantity: Number(item.quantity || 0),
+    threshold: Number(item.threshold || 0),
+    note: item.note || "",
+  };
+}
+
+async function loadCloudItems() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const rows = await window.cloudStore.list("inventory_items", "select=*&order=updated_at.desc");
+    if (!Array.isArray(rows)) return;
+    state.items = rows.map(itemFromCloud);
+    saveItems();
+    render();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncItemToCloud(item) {
+  if (!canUseCloudData() || !isUuid(item.id)) return;
+
+  try {
+    await window.cloudStore.upsert("inventory_items", itemToCloud(item));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudItem(id) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.remove("inventory_items", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function render() {
@@ -244,6 +307,7 @@ function handleRowAction(action, id) {
     item.quantity = Math.max(0, item.quantity + delta);
     item.updatedAt = new Date().toISOString();
     saveItems();
+    syncItemToCloud(item);
     render();
     return;
   }
@@ -258,6 +322,7 @@ function handleRowAction(action, id) {
     if (!shouldDelete) return;
     state.items = state.items.filter((entry) => entry.id !== id);
     saveItems();
+    deleteCloudItem(id);
     render();
   }
 }
@@ -295,4 +360,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }

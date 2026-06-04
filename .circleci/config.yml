@@ -19,11 +19,21 @@ jobs:
             test -f desktop/main.js
             node -e "const pkg=require('./package.json'); if (!pkg.scripts['dist:win']) process.exit(1)"
       - run:
+          name: Verify Supabase migration files
+          command: |
+            set -euo pipefail
+            test -f database/supabase-schema.sql
+            test -f database/README.md
+            test -f shared/cloud-store.js
+            test -f shared/supabase-config.example.js
+      - run:
           name: Verify deployment folder
           command: |
             set -euo pipefail
             test -f netlify-public/index.html
             test -f netlify-public/netlify.toml
+            test -f netlify-public/shared/cloud-store.js
+            test -f netlify-public/shared/supabase-config.example.js
             for module in "初始介面" "主任" "教師" "總務" "財政" "檔案中心"; do
               test -f "netlify-public/${module}/index.html"
               test -f "netlify-public/${module}/app.js"

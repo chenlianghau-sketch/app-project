@@ -59,14 +59,15 @@ const elements = {
 let currentUser = null;
 let currentRole = null;
 
-elements.loginForm.addEventListener("submit", (event) => {
+elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  login(elements.username.value.trim(), elements.password.value);
+  await login(elements.username.value.trim(), elements.password.value);
 });
 
 elements.logoutButton.addEventListener("click", () => {
   currentUser = null;
   currentRole = null;
+  localStorage.removeItem("cram-school-supabase-session");
   elements.rolePanel.classList.add("hidden");
   elements.loginPanel.classList.remove("hidden");
   elements.password.value = "";
@@ -82,7 +83,12 @@ elements.accountButtons.forEach((button) => {
   });
 });
 
-function login(username, password) {
+async function login(username, password) {
+  if (window.cloudStore?.isEnabled()) {
+    await loginWithSupabase(username, password);
+    return;
+  }
+
   const user = users[username.toLowerCase()];
 
   if (!user || password !== PASSWORD) {
@@ -98,6 +104,59 @@ function login(username, password) {
   elements.welcomeText.textContent = `${user.displayName} 已登入，偵測到身分：${user.roles.join("、")}。`;
   renderRoleTabs();
   renderRoleContent();
+}
+
+async function loginWithSupabase(username, password) {
+  elements.errorMessage.textContent = "登入中...";
+
+  try {
+    const email = normalizeLoginEmail(username);
+    const session = await window.cloudStore.signIn(email, password);
+    const profile = await window.cloudStore.getProfile(session.access_token, session.user.id);
+
+    if (!profile) {
+      elements.errorMessage.textContent = "登入成功，但尚未建立角色資料，請檢查 profiles 表。";
+      return;
+    }
+
+    const roleList = getProfileRoles(profile);
+    currentUser = {
+      displayName: profile.display_name || profile.username,
+      roles: roleList,
+    };
+    currentRole = roleList[0];
+    localStorage.setItem("cram-school-current-user", profile.username);
+    localStorage.setItem("cram-school-current-role", currentRole);
+    localStorage.setItem(
+      "cram-school-supabase-session",
+      JSON.stringify({
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        userId: session.user.id,
+        username: profile.username,
+        displayName: profile.display_name,
+        roles: roleList,
+      })
+    );
+    elements.loginPanel.classList.add("hidden");
+    elements.rolePanel.classList.remove("hidden");
+    elements.errorMessage.textContent = "";
+    elements.welcomeText.textContent = `${currentUser.displayName} 已登入雲端資料庫，偵測到身分：${roleList.join("、")}。`;
+    renderRoleTabs();
+    renderRoleContent();
+  } catch (error) {
+    elements.errorMessage.textContent = "雲端登入失敗，請確認 email、密碼與 Supabase 設定。";
+  }
+}
+
+function normalizeLoginEmail(username) {
+  return username.includes("@") ? username : `${username.toLowerCase()}@example.com`;
+}
+
+function getProfileRoles(profile) {
+  const fallbackRoles = users[profile.username]?.roles;
+  if (fallbackRoles?.length) return fallbackRoles;
+  return [profile.role].filter(Boolean);
 }
 
 function renderRoleTabs() {

@@ -62,6 +62,7 @@ function initialize() {
   elements.clearReadButton.addEventListener("click", clearReadMessages);
 
   renderMessages();
+  loadCloudMessages();
 }
 
 function loadMessages() {
@@ -78,6 +79,105 @@ function loadMessages() {
 
 function saveMessages() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.messages));
+}
+
+function canUseCloudData() {
+  return Boolean(window.cloudStore?.isEnabled() && localStorage.getItem("cram-school-supabase-session"));
+}
+
+function messageFromCloud(row) {
+  let payload = {};
+  try {
+    payload = JSON.parse(row.body || "{}");
+  } catch {
+    payload = { message: row.body || "" };
+  }
+
+  const attachment =
+    payload.attachment ||
+    (row.attachment_name
+      ? {
+          name: row.attachment_name,
+          type: row.attachment_type || "text/plain",
+          size: 0,
+          content: row.attachment_url || "",
+        }
+      : null);
+
+  return {
+    id: row.id,
+    sender: row.sender,
+    recipient: row.recipient,
+    title: payload.title || row.attachment_name || "(無標題)",
+    message: payload.message || "",
+    attachment,
+    createdAt: row.created_at || new Date().toISOString(),
+    readBy: Array.isArray(payload.readBy) ? payload.readBy : [],
+  };
+}
+
+function messageToCloud(message) {
+  const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+
+  return {
+    id: message.id,
+    sender: message.sender,
+    recipient: message.recipient,
+    body: JSON.stringify({
+      title: message.title || "",
+      message: message.message || "",
+      attachment: message.attachment || null,
+      readBy,
+    }),
+    attachment_name: message.attachment?.name || null,
+    attachment_type: message.attachment?.type || null,
+    attachment_url: message.attachment?.content || null,
+    read_at: readBy.length ? new Date().toISOString() : null,
+  };
+}
+
+async function loadCloudMessages() {
+  if (!canUseCloudData()) return;
+
+  try {
+    const rows = await window.cloudStore.list("messages", "select=*&order=created_at.desc");
+    if (!Array.isArray(rows)) return;
+    state.messages = rows.map(messageFromCloud);
+    saveMessages();
+    renderMessages();
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function syncMessageToCloud(message) {
+  if (!canUseCloudData() || !isUuid(message.id)) return;
+
+  try {
+    await window.cloudStore.upsert("messages", messageToCloud(message));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function updateCloudMessage(message) {
+  if (!canUseCloudData() || !isUuid(message.id)) return;
+
+  try {
+    await window.cloudStore.update("messages", message.id, messageToCloud(message));
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
+}
+
+async function deleteCloudMessage(id) {
+  if (!canUseCloudData() || !isUuid(id)) return;
+
+  try {
+    await window.cloudStore.remove("messages", id);
+  } catch {
+    // Keep localStorage data when cloud is temporarily unavailable.
+  }
 }
 
 function renderPersonOptions() {
@@ -167,6 +267,7 @@ function sendMessage(event) {
 
   state.messages.unshift(entry);
   saveMessages();
+  syncMessageToCloud(entry);
   state.viewer = entry.sender;
   elements.viewer.value = state.viewer;
   resetForm();
@@ -270,12 +371,14 @@ function handleMessageAction(button) {
 
   if (button.dataset.action === "read") {
     if (!message.readBy.includes(state.viewer)) message.readBy.push(state.viewer);
+    updateCloudMessage(message);
   }
 
   if (button.dataset.action === "delete") {
     const shouldDelete = confirm(`確定刪除「${message.title}」嗎？`);
     if (!shouldDelete) return;
     state.messages = state.messages.filter((entry) => entry.id !== message.id);
+    deleteCloudMessage(message.id);
   }
 
   saveMessages();
@@ -284,8 +387,10 @@ function handleMessageAction(button) {
 
 function clearReadMessages() {
   const before = state.messages.length;
+  const removed = [];
   state.messages = state.messages.filter((message) => {
     const readIncoming = isIncoming(message) && message.readBy.includes(state.viewer);
+    if (readIncoming) removed.push(message.id);
     return !readIncoming;
   });
 
@@ -294,6 +399,7 @@ function clearReadMessages() {
   }
 
   saveMessages();
+  removed.forEach(deleteCloudMessage);
   renderMessages();
 }
 
@@ -326,4 +432,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
