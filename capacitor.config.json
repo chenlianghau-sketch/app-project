@@ -1,0 +1,8 @@
+{
+  "appId": "com.cramschool.management",
+  "appName": "補習班管理系統",
+  "webDir": "netlify-public",
+  "server": {
+    "androidScheme": "https"
+  }
+}

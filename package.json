@@ -8,9 +8,15 @@
     "start": "electron .",
     "check": "node --check desktop/main.js && node --check 初始介面/app.js && node --check 主任/app.js && node --check 教師/app.js && node --check 總務/app.js && node --check 財政/app.js && node --check 檔案中心/app.js",
     "package:win": "electron-builder --win portable",
-    "dist:win": "electron-builder --win nsis"
+    "dist:win": "electron-builder --win nsis",
+    "ios:sync": "cap sync ios",
+    "ios:copy": "cap copy ios",
+    "ios:open": "cap open ios"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8"
   },
