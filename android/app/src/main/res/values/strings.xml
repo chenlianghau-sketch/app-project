@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">補習班管理系統</string>
+    <string name="title_activity_main">補習班管理系統</string>
+    <string name="package_name">com.cramschool.management</string>
+    <string name="custom_url_scheme">com.cramschool.management</string>
+</resources>

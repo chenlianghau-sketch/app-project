@@ -11,9 +11,13 @@
     "dist:win": "electron-builder --win nsis",
     "ios:sync": "cap sync ios",
     "ios:copy": "cap copy ios",
-    "ios:open": "cap open ios"
+    "ios:open": "cap open ios",
+    "android:sync": "cap sync android",
+    "android:copy": "cap copy android",
+    "android:open": "cap open android"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/ios": "^8.4.0",
